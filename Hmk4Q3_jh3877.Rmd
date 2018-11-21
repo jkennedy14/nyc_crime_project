@@ -1,0 +1,101 @@
+---
+title: "Homework 4"
+author: "Jonas Han (jh3877)"
+date: "November 14, 2018"
+output: html_document
+---
+
+For our project, we decided to utilize NYPD's arrest data from January 2013 through June 2018. Below are analyses for the perpetrator race (PERP_RACE) variable in the dataset.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+current_arrests_df <- read.csv(file="./Raw_Data/NYPD_Arrest_Data__Year_to_Date_.csv", header=TRUE, na.strings="n/a")
+historic_arrests_df <- read.csv(file="./Raw_Data/NYPD_Arrests_Data__Historic_.csv", header=TRUE, na.strings="n/a")
+arrests_data <- rbind(current_arrests_df, historic_arrests_df)
+write.csv(arrests_data, file="./Raw_Data/arrests_data.csv", row.names=FALSE)
+```
+
+```{r}
+arrests_data <- read.csv(file="./Raw_Data/arrests_data.csv", header=TRUE)
+
+arrests_data$ARREST_DATE <- as.Date.character(arrests_data$ARREST_DATE, tryFormats="%m/%d/%Y")
+
+arrests_data$OFNS_DESC <- as.character(arrests_data$OFNS_DESC)
+arrests_data$OFNS_DESC[arrests_data$OFNS_DESC == "DANGEROUS DRUGS"] <- "DRUG RELATED"
+arrests_data$OFNS_DESC[arrests_data$OFNS_DESC == "ASSAULT 3 & RELATED OFFENSES"] <- "ASSAULT 3"
+arrests_data$OFNS_DESC[arrests_data$OFNS_DESC == "OTHER OFFENSES RELATED TO THEF"] <- "THEFT RELATED"
+arrests_data$OFNS_DESC[arrests_data$OFNS_DESC == "VEHICLE AND TRAFFIC LAWS"] <- "VEHICLE/TRAFFIC LAWS"
+arrests_data$OFNS_DESC[arrests_data$OFNS_DESC == "MISCELLANEOUS PENAL LAW"] <- "MISC PENAL LAW"
+arrests_data$OFNS_DESC[arrests_data$OFNS_DESC == "OTHER STATE LAWS"] <- "STATE LAWS"
+arrests_data$OFNS_DESC[arrests_data$OFNS_DESC == "DANGEROUS WEAPONS"] <- "WEAPONS RELATED"
+
+arrests_data$PERP_RACE <- as.character(arrests_data$PERP_RACE)
+arrests_data$PERP_RACE[arrests_data$PERP_RACE == "ASIAN / PACIFIC ISLANDER"] <- "ASIAN/PAC.ISL"
+arrests_data$PERP_RACE[arrests_data$PERP_RACE == "AMERICAN INDIAN/ALASKAN NATIVE"] <- "AMER IND"
+```
+
+In the frequency bar chart below, we can observe that Blacks constitute the largest racial group among arrests in NYC from January 2013 through June 2018. This is followed by White Hispanics, Whites, Black Hispanics, and Asians, respectively. 
+
+```{r fig.height=6, fig.width=9}
+perp_race_counts <- aggregate(KY_CD~PERP_RACE, arrests_data, length)
+colnames(perp_race_counts) <- c("Perp_Race", "Count")
+perp_race_counts <- perp_race_counts[order(-perp_race_counts$Count),]
+perp_race_counts <- arrange(perp_race_counts, Count)
+perp_race_counts$Perp_Race <- factor(perp_race_counts$Perp_Race, levels=perp_race_counts$Perp_Race)
+
+ggplot(data=perp_race_counts, aes(x=Perp_Race, y=Count)) + geom_bar(stat="identity") + ggtitle("NYC Arrests by Perpetrator Race (Jan 2013 - Jun 2018)") + theme_grey(14) + theme(plot.title=element_text(hjust=0.5)) + xlab("Perpetrator Race") + ylab("Frequency") + coord_flip()
+```
+
+Below are frequency bar charts for the perpetrator race variable, faceted by perpetrator sex. Note that the distributions are fairly similar across both sexes and females are arrested significantly less than males.
+
+```{r fig.height=6, fig.width=9}
+options(scipen=5)
+arrests_data$PERP_SEX <- factor(arrests_data$PERP_SEX, levels=c("M", "F"))
+perp_race_counts <- arrange(perp_race_counts, -Count)
+arrests_data$PERP_RACE <- factor(arrests_data$PERP_RACE, levels=perp_race_counts$Perp_Race)
+ggplot(arrests_data, aes(x=PERP_RACE)) + geom_bar(position = "dodge") + facet_wrap(~PERP_SEX) + theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(hjust = 0.5)) + ggtitle("NYC Arrests by Perpetrator Race & Sex (Jan 2013 - Jun 2018)")
+```
+
+Below is a group frequency bar chart by perpetrator race and age group. Similarly to the bar charts faceted by sex, we observe that the distributions are very similar across age groups. The only noticeable difference is that Black Hispanics account for more arrests than Whites in the <18 and 18-24 age groups. It is important to note that the bin widths are not equal across age groups so some bins (i.e. <18 and 18-24) are disproportionately small.
+
+```{r fig.height=6, fig.width=9}
+options(scipen=5)
+arrests_data$AGE_GROUP <- factor(arrests_data$AGE_GROUP, levels=c("<18", "18-24", "25-44", "45-64", "65+"))
+
+ggplot(data=subset(arrests_data, !is.na(AGE_GROUP)), aes(x=AGE_GROUP, fill=PERP_RACE)) + geom_bar(position = "dodge") + ggtitle("NYC Arrests by Perpetrator Race & Age Group (Jan 2013 - Jun 2018)") + theme(plot.title = element_text(hjust = 0.5)) + theme_grey(14)
+```
+
+
+According to the mosaic plot below, it appears that there is no significant relationship between the perpetrator race and perpetrator sex variables.
+
+```{r fig.height=15, fig.width=15}
+library(grid)
+library(vcd)
+
+perp_race_counts <- arrange(perp_race_counts, -Count)
+arrests_data$PERP_RACE <- factor(arrests_data$PERP_RACE, levels=perp_race_counts$Perp_Race)
+vcd::mosaic(PERP_SEX~PERP_RACE, arrests_data, direction="v", labeling=labeling_border(rot_labels=c(15,0,0,0)))
+```
+
+
+Likewise, there does not seem to be any significant association between the perptrator race and age group. 
+
+```{r fig.height=15, fig.width=15}
+library(grid)
+library(vcd)
+
+perp_race_counts <- arrange(perp_race_counts, -Count)
+arrests_data$PERP_RACE <- factor(arrests_data$PERP_RACE, levels=perp_race_counts$Perp_Race)
+vcd::mosaic(AGE_GROUP~PERP_RACE, arrests_data, direction="v", labeling=labeling_border(rot_labels=c(15,0,0,0)))
+```
+
+
+Some interesting questions to explore next: <br />
+1. How does the racial distribution of arrests in NYC compare to the overall demographic distribution of NYC residents? <br />
+2. How does the racial distribution of arrests in NYC compare to the racial distribution of the stop and frisk dataset and NYPD complaints dataset? <br />
+3. Are there differences between the types of offenses committed by each racial group? <br />
