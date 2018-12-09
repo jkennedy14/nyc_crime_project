@@ -1,0 +1,49 @@
+---
+title: "Shootings Analysis"
+author: "Jonas Han (jh3877)"
+date: "December 10, 2018"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+shootings_data <- read.csv(file="./Raw_Data/shootings_data.csv", header=TRUE, na.strings="n/a")
+```
+
+```{r}
+shootings_data$PERP_RACE <- as.character(shootings_data$PERP_RACE)
+shootings_data$PERP_RACE[shootings_data$PERP_RACE == "AMERICAN INDIAN/ALASKAN NATIVE"] <- "AMER IND"
+shootings_data$PERP_RACE[shootings_data$PERP_RACE == "ASIAN / PACIFIC ISLANDER"] <- "ASIAN/PAC.ISL"
+
+shootings_by_perp_race <- aggregate(INCIDENT_KEY~PERP_RACE, shootings_data, length)
+colnames(shootings_by_perp_race) <- c("race", "count")
+shootings_by_perp_race <- shootings_by_perp_race[order(-shootings_by_perp_race$count),]
+shootings_by_perp_race <- shootings_by_perp_race[-1,]
+shootings_by_perp_race <- shootings_by_perp_race[!(shootings_by_perp_race$race=="UNKNOWN"),]
+shootings_by_perp_race$percentage <- shootings_by_perp_race$count / sum(shootings_by_perp_race$count)
+shootings_by_perp_race$dataset <- "Shootings"
+write.csv(shootings_by_perp_race, file="./Data/shootings_by_perp_race.csv", row.names=FALSE)
+shootings_by_perp_race
+```
+
+```{r}
+shootings_data$VIC_RACE <- as.character(shootings_data$VIC_RACE)
+shootings_data$VIC_RACE[shootings_data$VIC_RACE == "AMERICAN INDIAN/ALASKAN NATIVE"] <- "AMER IND"
+shootings_data$VIC_RACE[shootings_data$VIC_RACE == "ASIAN / PACIFIC ISLANDER"] <- "ASIAN/PAC.ISL"
+
+shootings_by_vic_race <- aggregate(INCIDENT_KEY~VIC_RACE, shootings_data, length)
+colnames(shootings_by_vic_race) <- c("race", "count")
+shootings_by_vic_race <- shootings_by_vic_race[order(-shootings_by_vic_race$count),]
+shootings_by_vic_race <- shootings_by_vic_race[!(shootings_by_vic_race$race=="UNKNOWN"),]
+shootings_by_vic_race$percentage <- shootings_by_vic_race$count / sum(shootings_by_vic_race$count)
+shootings_by_vic_race$dataset <- "Shootings"
+write.csv(shootings_by_vic_race, file="./Data/shootings_by_vic_race.csv", row.names=FALSE)
+shootings_by_vic_race
+```
+

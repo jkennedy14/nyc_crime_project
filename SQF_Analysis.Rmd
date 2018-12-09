@@ -1,0 +1,187 @@
+---
+title: "SQF Analysis"
+author: "Jonas Han (jh3877)"
+date: "December 10, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, message=FALSE, warning=FALSE)
+library(plyr)
+library(ggplot2)
+```
+
+```{r}
+sqf_df <- data.frame()
+
+for (year in 2003:2014)
+{
+  print(year)
+  data <- read.csv(unz(paste("./Raw_Data/SQF_Data/sqf-", year, "-csv.zip", sep=""), paste(year, ".csv", sep="")), header = TRUE, sep = ",")
+  #print(sum(is.na(data$year)))
+  sqf_df <- rbind.fill(sqf_df, data)
+}
+
+for (year in 2015:2017)
+{
+  print(year)
+  data <- read.csv(paste("./Raw_Data/SQF_Data/sqf-", year, ".csv", sep=""), header = TRUE, sep=",")
+  sqf_df <- rbind.fill(sqf_df, data)
+}
+
+write.csv(sqf_df, file="./Raw_Data/sqf_data.csv", row.names=FALSE)
+```
+
+```{r}
+sqf_df <- data.frame()
+
+for (year in 2003:2014)
+{
+  print(year)
+  data <- read.csv(unz(paste("./Raw_Data/SQF_Data/sqf-", year, "-csv.zip", sep=""), paste(year, ".csv", sep="")), header = TRUE, sep = ",")
+  sqf_df <- rbind.fill(sqf_df, data)
+}
+
+for (year in 2015:2016)
+{
+  print(year)
+  data <- read.csv(paste("./Raw_Data/SQF_Data/sqf-", year, ".csv", sep=""), header = TRUE, sep=",")
+  sqf_df <- rbind.fill(sqf_df, data)
+}
+
+drops <- c("ser_num", "recstat", "trhsloc", "perobs", "perstop", "typeofid", "othpers", "comppct", "offunif", "officrid", "adtlrept", "radio", "ac_rept", "ac_inves", "repcmd", "revcmd", "offverb", "offshld", "ht_feet", "ht_inch", "weight", "haircolr", "eyecolor", "build", "othfeatr", "addrtyp", "rescode", "premtype", "aptnum", "addrpct", "sector", "beat", "post", "dettypCM", "lineCM", "detailCM")
+sqf_df <- sqf_df[ , !(names(sqf_df) %in% drops)]
+write.csv(sqf_df, file="./Raw_Data/sqf_data_abridged_2003_2016.csv", row.names=FALSE)
+```
+
+```{r}
+sqf_df <- read.csv(file="./Raw_Data/sqf_data_abridged_2003_2016.csv", header=TRUE)
+sqf_2017 = read.csv(file="./Raw_Data/SQF_Data/sqf-2017.csv", header=TRUE)
+print(unique(sqf_df$year))
+```
+
+
+```{r}
+sqf_by_year <- aggregate(pct~year, sqf_df, length)
+sqf_2017_agg <- aggregate(STOP_FRISK_ID~YEAR2, sqf_2017, length)
+colnames(sqf_by_year)[2] <- "count"
+colnames(sqf_2017_agg) <- c("year", "count")
+sqf_by_year <- rbind(sqf_by_year, sqf_2017_agg)
+write.csv(sqf_by_year, "./Data/sqf_by_year.csv", row.names=FALSE)
+print(sqf_by_year)
+```
+
+```{r fig.height=8, fig.width=12}
+ggplot(data=sqf_by_year, aes(x=year, y=count/1000)) + geom_bar(stat="identity") + ggtitle("NYPD Stop-and-Frisk (2003-2017)") + theme_grey(18) + theme(plot.title=element_text(hjust=0.5)) + scale_x_continuous("Year", labels=as.character(sqf_by_year$year), breaks=sqf_by_year$year) + ylab("Frequency (Thousands)")
+```
+
+
+```{r}
+sqf_2017$SUSPECT_RACE_DESCRIPTION <- as.character(sqf_2017$SUSPECT_RACE_DESCRIPTION)
+sqf_2017_race_agg <- aggregate(STOP_FRISK_ID~SUSPECT_RACE_DESCRIPTION, sqf_2017, length)
+colnames(sqf_2017_race_agg) <- c("race", "count")
+
+sqf_df$race <- as.character(sqf_df$race)
+sqf_df$race[sqf_df$race == "W"] <- "WHITE"
+sqf_df$race[sqf_df$race == "A"] <- "ASIAN/PAC.ISL"
+sqf_df$race[sqf_df$race == "B"] <- "BLACK"
+sqf_df$race[sqf_df$race == "I"] <- "AMER IND"
+sqf_df$race[sqf_df$race == "P"] <- "BLACK HISPANIC"
+sqf_df$race[sqf_df$race == "Q"] <- "WHITE HISPANIC"
+sqf_df$race[sqf_df$race == "X"] <- "UNKNOWN"
+sqf_df$race[sqf_df$race == "Z"] <- "OTHER"
+sqf_df$race[sqf_df$race == "U"] <- "UNKNOWN"
+sqf_race_agg <- aggregate(pct~race, sqf_df, length)
+colnames(sqf_race_agg) <- c("race", "count")
+
+sqf_race_agg <- ddply(rbind(sqf_race_agg, sqf_2017_race_agg), .(race), summarize, sum_count = sum(count))
+colnames(sqf_race_agg) <- c("race", "count")
+sqf_race_agg <- sqf_race_agg[order(-sqf_race_agg$count),]
+sqf_race_agg <- head(sqf_race_agg,-3)
+sqf_race_agg <- sqf_race_agg[!(sqf_race_agg$race=="UNKNOWN"),]
+sqf_race_agg$percentage = sqf_race_agg$count / sum(sqf_race_agg$count)
+sqf_race_agg["dataset"] <- "Stop-and-Frisk"
+write.csv(sqf_race_agg, file="./Data/sqf_by_race.csv", row.names=FALSE)
+```
+
+
+```{r}
+print(sqf_race_agg)
+```
+
+```{r}
+sqf_weapon_found <- sqf_df[(sqf_df$pistol == "Y") | (sqf_df$riflshot == "Y") | (sqf_df$asltweap == "Y") | (sqf_df$knifcuti == "Y") | (sqf_df$machgun == "Y") | (sqf_df$othrweap == "Y"),]
+sqf_weapon_found_2017 <- sqf_2017[(sqf_2017$FIREARM_FLAG == "Y") | (sqf_2017$KNIFE_CUTTER_FLAG == "Y") | (sqf_2017$OTHER_WEAPON_FLAG ==  "Y") | (sqf_2017$WEAPON_FOUND_FLAG == "Y"),]
+
+# print(dim(sqf_weapon_found))
+# print(dim(sqf_weapon_found_2017))
+
+weapons_found_count <- dim(sqf_weapon_found)[1] + dim(sqf_weapon_found_2017)[1]
+print(weapons_found_count)
+
+sqf_contraband_found <- sqf_df[sqf_df$contrabn == "Y",]
+sqf_contraband_found_2017 <- sqf_2017[sqf_2017$OTHER_CONTRABAND_FLAG == "Y",]
+
+# print(dim(sqf_contraband_found))
+# print(dim(sqf_contraband_found_2017))
+
+contraband_found_count <- dim(sqf_contraband_found)[1] + dim(sqf_contraband_found_2017)[1]
+print(contraband_found_count)
+
+
+sqf_weapon_or_contraband_found <- sqf_df[(sqf_df$pistol == "Y") | (sqf_df$riflshot == "Y") | (sqf_df$asltweap == "Y") | (sqf_df$knifcuti == "Y") | (sqf_df$machgun == "Y") | (sqf_df$othrweap == "Y") | (sqf_df$contrabn == "Y"),]
+# print(dim(sqf_weapon_or_contraband_found))
+
+
+sqf_weapon_or_contraband_found_2017 <- sqf_2017[(sqf_2017$FIREARM_FLAG == "Y") | (sqf_2017$KNIFE_CUTTER_FLAG == "Y") | (sqf_2017$OTHER_WEAPON_FLAG ==  "Y") | (sqf_2017$WEAPON_FOUND_FLAG == "Y") | (sqf_2017$OTHER_CONTRABAND_FLAG == "Y"),]
+# print(dim(sqf_weapon_or_contraband_found_2017))
+
+sqf_weapon_or_contraband_found_count <- dim(sqf_weapon_or_contraband_found)[1] + dim(sqf_weapon_or_contraband_found_2017)[1]
+sqf_weapon_or_contraband_found_count
+
+arrest_made_df <- sqf_df[sqf_df$arstmade == "Y",]
+arrest_made_2017_df <- sqf_2017[sqf_2017$SUSPECT_ARRESTED_FLAG == "Y",]
+arrest_made_count <- dim(arrest_made_df)[1] + dim(arrest_made_2017_df)[1]
+print(arrest_made_count)
+
+summons_given_df <- sqf_df[sqf_df$sumissue == "Y",]
+summons_given_2017_df <- sqf_2017[sqf_2017$SUMMONS_ISSUED_FLAG == "Y",]
+summons_given_count <- dim(summons_given_df)[1] + dim(summons_given_2017_df)[1]
+print(summons_given_count)
+
+arrest_made_or_summons_given_df <- sqf_df[(sqf_df$arstmade == "Y") | (sqf_df$sumissue == "Y"),]
+arrest_made_or_summons_given_2017 <- sqf_2017[(sqf_2017$SUSPECT_ARRESTED_FLAG == "Y") | (sqf_2017$SUMMONS_ISSUED_FLAG == "Y"),]
+arrest_made_orsummons_given_count <- dim(arrest_made_or_summons_given_df)[1] + dim(arrest_made_or_summons_given_2017)[1]
+print(arrest_made_orsummons_given_count)
+
+not_innocent_df <- data.frame(c("Weapon Found", "Contraband Found", "Contraband or Weapon Found", "Arrest Made", "Summons Given", "Arrest Made or Summons Given"))
+colnames(not_innocent_df)[1] <- "Category"
+not_innocent_df$Count <- c(weapons_found_count, contraband_found_count, sqf_weapon_or_contraband_found_count, arrest_made_count, summons_given_count, arrest_made_orsummons_given_count)
+not_innocent_df["Percentage_of_Stops"] <- not_innocent_df$Count/(dim(sqf_2017)[1] + dim(sqf_df)[1])
+not_innocent_df$Category <- factor(not_innocent_df$Category, levels=c("Arrest Made or Summons Given", "Arrest Made", "Summons Given", "Contraband or Weapon Found", "Contraband Found", "Weapon Found"))
+
+not_innocent_df
+
+write.csv(not_innocent_df, "./Data/sqf_not_innocent.csv", row.names=FALSE)
+```
+
+```{r fig.height=5, fig.width=9}
+ggplot(not_innocent_df, aes(x=reorder(Category, Count), y=Count/1000)) + geom_bar(stat="identity") + theme_grey(16) + coord_flip() + ylab("Frequency(Thousands)") + xlab("") + theme(plot.margin = margin(10, 15, 10, 1))
+```
+
+```{r fig.height=5, fig.width=9}
+ggplot(not_innocent_df, aes(x=reorder(Category, Percentage_of_Stops), y=Percentage_of_Stops)) + geom_bar(stat="identity") + theme_grey(16) + coord_flip() + ylab("Percentage of Stops") + xlab("") + scale_y_continuous(labels = scales::percent) + theme(plot.margin = margin(10, 15, 10, 1))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
