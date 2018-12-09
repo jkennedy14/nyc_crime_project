@@ -1,0 +1,51 @@
+---
+title: "Complaints Analysis"
+author: "Jonas Han (jh3877)"
+date: "December 10, 2018"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+complaints_data <- read.csv(file="./Raw_Data/complaints_data.csv", header=TRUE, na.strings="n/a")
+```
+
+```{r}
+complaints_data$SUSP_RACE <- as.character(complaints_data$SUSP_RACE)
+complaints_data$SUSP_RACE[complaints_data$SUSP_RACE == "AMERICAN INDIAN/ALASKAN NATIVE"] <- "AMER IND"
+complaints_data$SUSP_RACE[complaints_data$SUSP_RACE == "ASIAN / PACIFIC ISLANDER"] <- "ASIAN/PAC.ISL"
+
+complaints_by_susp_race <- aggregate(CMPLNT_NUM~SUSP_RACE, complaints_data, length)
+colnames(complaints_by_susp_race) <- c("race", "count")
+complaints_by_susp_race <- complaints_by_susp_race[order(-complaints_by_susp_race$count),]
+complaints_by_susp_race <- complaints_by_susp_race[-1,]
+complaints_by_susp_race <- complaints_by_susp_race[!(complaints_by_susp_race$race=="UNKNOWN"),]
+complaints_by_susp_race$percentage <- complaints_by_susp_race$count / sum(complaints_by_susp_race$count)
+complaints_by_susp_race$dataset <- "Complaints"
+write.csv(complaints_by_susp_race, file="./Data/complaints_by_susp_race.csv", row.names=FALSE)
+complaints_by_susp_race
+```
+
+```{r}
+complaints_data$VIC_RACE <- as.character(complaints_data$VIC_RACE)
+complaints_data$VIC_RACE[complaints_data$VIC_RACE == "AMERICAN INDIAN/ALASKAN NATIVE"] <- "AMER IND"
+complaints_data$VIC_RACE[complaints_data$VIC_RACE == "ASIAN / PACIFIC ISLANDER"] <- "ASIAN/PAC.ISL"
+
+complaints_by_vic_race <- aggregate(CMPLNT_NUM~VIC_RACE, complaints_data, length)
+colnames(complaints_by_vic_race) <- c("race", "count")
+complaints_by_vic_race <- complaints_by_vic_race[order(-complaints_by_vic_race$count),]
+complaints_by_vic_race <- complaints_by_vic_race[!(complaints_by_vic_race$race=="UNKNOWN"),]
+complaints_by_vic_race <- head(complaints_by_vic_race,-2)
+complaints_by_vic_race$percentage <- complaints_by_vic_race$count / sum(complaints_by_vic_race$count)
+complaints_by_vic_race$dataset <- "Complaints"
+write.csv(complaints_by_vic_race, file="./Data/complaints_by_vic_race.csv", row.names=FALSE)
+complaints_by_vic_race
+
+```
+

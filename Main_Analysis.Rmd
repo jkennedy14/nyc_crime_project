@@ -1,0 +1,148 @@
+---
+title: "Main Analysis"
+author: "Jonas Han (jh3877)"
+date: "December 10, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(tidyverse)
+library(ggplot2)
+library(reshape2)
+```
+
+
+# Introduction
+
+### Team
+- Jonas Han (jh3877): 
+- Justin Ali Kennedy (jak2294):
+- Lerong Chen (lc3375):
+- Sidney Frank Fletcher (sff2114):
+
+Stop-and-Frisk is a NYPD practice of briefly detaining, questioning, and sometimes searching civilians for weapons and/or contraband.
+
+Furthermore, one of our team members (Jonas) was a high school student in Brooklyn around the peak of the stop-and-frisk program and witnessed many stops in the train station nearby his school. 
+
+# Executive Summary
+
+From the frequency bar plot below, we observe that the practice of stop-and-frisk significantly increased during then-Mayor Michael Bloomberg's tenure in office, which began in 2002 and ended in 2013. The subsequent sharp decline in stop-and-frisk was led by a federal lawsuit against the practice in 2013 as well as Bill de Blasio's rise to the mayor's office in 2014. Bill de Blasio was an avid opponent of stop-and-frisk and ran a campaign promising to reform the practice. Since taking office in 2014, stop-and-frisk has decreased every single year. 
+
+```{r fig.height=7, fig.width=12}
+sqf_by_year <- read.csv(file="./Data/sqf_by_year.csv", header=TRUE)
+ggplot(data=sqf_by_year, aes(x=year, y=count/1000)) + geom_bar(stat="identity") + ggtitle("NYPD Stop-and-Frisk (2003-2017)") + theme_grey(18) + theme(plot.title=element_text(hjust=0.5)) + scale_x_continuous("Year", labels=as.character(sqf_by_year$year), breaks=sqf_by_year$year) + ylab("Frequency (Thousands)")
+```
+
+
+For an preliminary analysis, we compared the race of stop-and-frisk suspects against the demographics of NYC from the 2010 Census. From this initial perspective, it appears that there may be an issue of racial profiling in regards to the stop-and-frisk program. From 2003 to 2017, over 50% of stop-and-frisk suspects were Black while less than 25% of NYC is Black. Furthermore, White suspects accounted for less than 10% of stops, but represent the majority(>30%) of NYC residents. A similar disparity exists for Asians across the two datasets. Note that it was difficult to compare the Hispanic populations across the two different data sources as the stop-and-frisk dataset buckets all Hispanics into White Hispanics or Black Hispanics. In the 2010 Census data, most Hispanics responded in the "Some Other Race alone" category and not in the "White alone" or "Black or African-American alone" categories. 
+
+
+```{r fig.height=7, fig.width=12}
+arrests_by_race <- read.csv(file="./Data/arrests_by_race.csv", header=TRUE)
+census_by_race <- read.csv(file="./Data/census_by_race.csv", header=TRUE)
+complaints_by_susp_race <- read.csv(file="./Data/complaints_by_susp_race.csv", header=TRUE)
+shootings_by_perp_race <- read.csv(file="./Data/shootings_by_perp_race.csv", header=TRUE)
+sqf_by_race <- read.csv(file="./Data/sqf_by_race.csv", header=TRUE)
+
+race_data <- do.call("rbind", list(arrests_by_race, complaints_by_susp_race, shootings_by_perp_race, sqf_by_race))
+race_data$dataset <- factor(race_data$dataset, levels=c("Stop-and-Frisk", "Complaints", "Arrests", "Shootings"))
+
+par(mfrow=c(1,2))
+par(mar = c(11,4,3,1) + 0.1)
+
+barplot(sqf_by_race$percentage, names.arg=sqf_by_race$race, main="Stop-and-Frisk by Suspect Race", ylim=c(0, .55), las=2, ylab="Percentage", yaxt="n")
+axis(2, at=pretty(sqf_by_race$percentage), lab=paste0(pretty(sqf_by_race$percentage) * 100, "%"), las=2)
+
+barplot(census_by_race$percentage, names.arg=census_by_race$race, main="NYC 2010 Census by Race", ylim=c(0, .55), las=2, ylab="Percentage", yaxt="n")
+axis(2, at=pretty(sqf_by_race$percentage), lab=paste0(pretty(sqf_by_race$percentage) * 100, "%"), las=2)
+```
+
+
+In response to the racial profiling controversy, then-Mayor Michael Bloomberg stated that "If we stopped people based on census numbers, we would stop many fewer criminals, recover many fewer weapons and allow many more violent crimes to take place". He has also further stated in an op-ed for The Washington Post that "Ninety percent of all people killed in our city — and 90 percent of all those who commit the murders and other violent crimes — are black and Hispanic". We were interested to find out for ourselves if the former mayor's statements were true. Thus, we looked at the suspect/perpetrator race variable across the stop-and-frisk, complaints, arrests, and shooting incidents datasets to answer the question. From the plot below, we observe that the racial composition of the suspects/perpetrators in stop-and-frisk, complaints, and arrests datasets were all fairly similar. That is, it appears that Blacks are stopped disproportionately compared to the percentage of Blacks in NYC, but not compared to the percentage of complaints filed against Black suspects or arrests of Black perpetrators. There are two possible explanations of this. The first is that society is prejudiced against Blacks and thus are more likely to file complaints against Blacks or . Another possibility is that Blacks disproportionately commit more crime. 
+
+
+```{r fig.height=5, fig.width=12}
+race_bar_chart <- ggplot(race_data, aes(x=race, y=percentage, fill=race)) + geom_bar(stat="identity") + facet_grid(.~dataset) + theme(axis.text.x = element_text(angle = 60, hjust=1)) + xlab("Suspect/Perpetrator Race") + ylab("Percentage") + guides(fill=guide_legend(title="")) + scale_fill_brewer(palette="Set1") + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+race_bar_chart
+```
+
+
+
+```{r fig.height=5, fig.width=12}
+complaints_by_vic_race <- read.csv(file="./Data/complaints_by_vic_race.csv", header=TRUE)
+complaints_by_vic_race$susp_vic_category <- "Complaints | Victim"
+shootings_by_vic_race <- read.csv(file="./Data/shootings_by_vic_race.csv", header=TRUE)
+shootings_by_vic_race$susp_vic_category <- "Shootings | Victim"
+
+complaints_by_susp_race$susp_vic_category <- "Complaints | Suspect"
+shootings_by_perp_race$susp_vic_category <- "Shootings | Perpetrator"
+
+susp_vic_by_race <- do.call("rbind", list(complaints_by_vic_race, complaints_by_susp_race, shootings_by_perp_race, shootings_by_vic_race))
+susp_vic_by_race$susp_vic_category <- factor(susp_vic_by_race$susp_vic_category, levels=c("Complaints | Suspect", "Complaints | Victim", "Shootings | Perpetrator", "Shootings | Victim"))
+
+susp_vic_bar_chart <- ggplot(susp_vic_by_race, aes(x=race, y=percentage, fill=race)) + geom_bar(stat="identity") + facet_grid(.~susp_vic_category) + theme(axis.text.x = element_text(angle = 60, hjust=1)) + xlab("") + ylab("Percentage") + guides(fill=guide_legend(title="")) + scale_fill_brewer(palette="Set1") + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+susp_vic_bar_chart
+```
+
+Next, we will analyze the efficacy of the stop-and-frisk program on crime rate in NYC. 
+
+```{r fig.height=5, fig.width=9}
+not_innocent_df <- read.csv(file="./Data/sqf_not_innocent.csv", header=TRUE)
+
+ggplot(not_innocent_df, aes(x=reorder(Category, Count), y=Count/1000)) + geom_bar(stat="identity") + theme_grey(16) + coord_flip() + ylab("Frequency(Thousands)") + xlab("") + theme(plot.margin = margin(10, 15, 10, 1))
+
+ggplot(not_innocent_df, aes(x=reorder(Category, Percentage_of_Stops), y=Percentage_of_Stops)) + geom_bar(stat="identity") + theme_grey(16) + coord_flip() + ylab("Percentage of Stops") + xlab("") + scale_y_continuous(labels = scales::percent) + theme(plot.margin = margin(10, 15, 10, 1))
+```
+
+
+```{r fig.height=7, fig.width=12}
+# https://www1.nyc.gov/site/nypd/stats/crime-statistics/historical.page
+sqf_vs_crime_by_year <- sqf_by_year
+colnames(sqf_vs_crime_by_year) <- c("year", "sqf_count")
+major_felonies_by_year <- c(147069, 142093,	135475,	128682,	121009,	117956,	106730,	105115,	106669,	111147,	111335,	106722,	105453, 101716, 96658)
+non_major_felonies_by_year <- c(61217, 66733, 67854, 69028, 70958, 68958, 63760, 59387, 57240, 56902, 57650, 56869, 56520, 58346, 54907)
+misdemeanors_by_year <- c(365471, 357724, 353649, 361574, 378616, 380406, 386765, 391892, 383108, 374364, 359350, 348371, 322848, 314925, 300354)
+
+sqf_vs_crime_by_year$major_felonies <- major_felonies_by_year
+sqf_vs_crime_by_year$nonmajor_felonies <- non_major_felonies_by_year
+sqf_vs_crime_by_year$misdemeanors <- misdemeanors_by_year
+
+starting_values_df <- sqf_vs_crime_by_year[sqf_vs_crime_by_year$year == 2003,]
+sqf_vs_crime_by_year["Stop-and-Frisk"] <- (sqf_vs_crime_by_year$sqf_count/starting_values_df$sqf_count) * 100
+sqf_vs_crime_by_year["Major Felonies"] <- (sqf_vs_crime_by_year$major_felonies/starting_values_df$major_felonies) * 100
+sqf_vs_crime_by_year["Non-Major Felonies"] <- (sqf_vs_crime_by_year$nonmajor_felonies/starting_values_df$nonmajor_felonies) * 100
+sqf_vs_crime_by_year["Misdemeanors"] <- (sqf_vs_crime_by_year$misdemeanors/starting_values_df$misdemeanors) * 100
+
+sqf_crime_indexed_by_year <- melt(sqf_vs_crime_by_year, id.vars = "year", measure.vars = c("Stop-and-Frisk", "Major Felonies", "Non-Major Felonies", "Misdemeanors"))
+
+colnames(sqf_crime_indexed_by_year)[2] <- "Category"
+
+ggplot() + geom_line(data=sqf_crime_indexed_by_year, aes(x=year, y=value, color=Category), lwd=1.5) + xlab("Year") + ylab("Index") + ggtitle("Stop-and-Frisk vs. Crime") + scale_color_brewer(palette="Set1") + theme_grey(16) + theme(plot.title=element_text(hjust=0.5)) + scale_x_continuous("", labels = as.character(sqf_crime_indexed_by_year$year), breaks = sqf_crime_indexed_by_year$year)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
