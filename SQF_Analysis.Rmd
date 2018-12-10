@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo=TRUE, message=FALSE, warning=FALSE)
 library(plyr)
 library(ggplot2)
+options(scipen=999)
 ```
 
 ```{r}
@@ -172,6 +173,55 @@ ggplot(not_innocent_df, aes(x=reorder(Category, Count), y=Count/1000)) + geom_ba
 ```{r fig.height=5, fig.width=9}
 ggplot(not_innocent_df, aes(x=reorder(Category, Percentage_of_Stops), y=Percentage_of_Stops)) + geom_bar(stat="identity") + theme_grey(16) + coord_flip() + ylab("Percentage of Stops") + xlab("") + scale_y_continuous(labels = scales::percent) + theme(plot.margin = margin(10, 15, 10, 1))
 ```
+
+```{r fig.height=6, fig.width=10}
+sqf_race_agg_by_year <- aggregate(pct~race+year, sqf_df, length)
+colnames(sqf_race_agg_by_year) <- c("race", "year", "count")
+sqf_race_agg_by_year <- sqf_race_agg_by_year[!(sqf_race_agg_by_year$race=="UNKNOWN" | sqf_race_agg_by_year$race=="OTHER" | sqf_race_agg_by_year$race=="AMER IND" | sqf_race_agg_by_year$race=="") ,]
+
+sqf_race_agg_by_year$percentage <- NA
+
+for(year in 2003:2016)
+{
+  df <- sqf_race_agg_by_year[sqf_race_agg_by_year$year == year,]
+  year_sum <- sum(df$count)
+  sqf_race_agg_by_year$percentage <- ifelse(sqf_race_agg_by_year$year == year, sqf_race_agg_by_year$count/year_sum, sqf_race_agg_by_year$percentage)
+}
+
+sqf_2017_by_race <- aggregate(STOP_FRISK_ID~SUSPECT_RACE_DESCRIPTION+YEAR2, sqf_2017, length)
+sqf_2017_by_race <- sqf_2017_by_race[-1,]
+colnames(sqf_2017_by_race) <- c("race", "year", "count")
+sqf_2017_by_race <- sqf_2017_by_race[!sqf_2017_by_race$race=="MALE",]
+sqf_2017_by_race$percentage <- sqf_2017_by_race$count/sum(sqf_2017_by_race$count)
+
+sqf_race_agg_by_year <- rbind(sqf_race_agg_by_year, sqf_2017_by_race)
+sqf_race_agg_by_year
+
+ggplot() + geom_line(data=sqf_race_agg_by_year, aes(x=year, y=percentage, color=race), lwd=1.5) + xlab("Year") + ylab("Percentage") + ggtitle("Stops by Racial Makeup") + scale_color_brewer(palette="Set1") + theme_grey(16) + theme(plot.title=element_text(hjust=0.5)) + scale_x_continuous("", labels = as.character(sqf_race_agg_by_year$year), breaks = sqf_race_agg_by_year$year)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
