@@ -64,7 +64,9 @@ In response to the racial profiling controversy, then-Mayor Michael Bloomberg st
 
 
 ```{r fig.height=5, fig.width=12}
-race_bar_chart <- ggplot(race_data, aes(x=race, y=percentage, fill=race)) + geom_bar(stat="identity") + facet_grid(.~dataset) + theme(axis.text.x = element_text(angle = 60, hjust=1)) + xlab("Suspect/Perpetrator Race") + ylab("Percentage") + guides(fill=guide_legend(title="")) + scale_fill_brewer(palette="Set1") + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+race_bar_chart <- ggplot(race_data, aes(x=race, y=percentage, fill=race)) + geom_bar(stat="identity") + facet_grid(.~dataset) + theme(axis.text.x = element_text(angle = 60, hjust=1)) + xlab("Suspect/Perpetrator Race") + ylab("Percentage") + guides(fill=guide_legend(title="")) + scale_fill_manual(values=cbbPalette) + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 race_bar_chart
 ```
 
@@ -82,7 +84,10 @@ shootings_by_perp_race$susp_vic_category <- "Shootings | Perpetrator"
 susp_vic_by_race <- do.call("rbind", list(complaints_by_vic_race, complaints_by_susp_race, shootings_by_perp_race, shootings_by_vic_race))
 susp_vic_by_race$susp_vic_category <- factor(susp_vic_by_race$susp_vic_category, levels=c("Complaints | Suspect", "Complaints | Victim", "Shootings | Perpetrator", "Shootings | Victim"))
 
-susp_vic_bar_chart <- ggplot(susp_vic_by_race, aes(x=race, y=percentage, fill=race)) + geom_bar(stat="identity") + facet_grid(.~susp_vic_category) + theme(axis.text.x = element_text(angle = 60, hjust=1)) + xlab("") + ylab("Percentage") + guides(fill=guide_legend(title="")) + scale_fill_brewer(palette="Set1") + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+susp_vic_bar_chart <- ggplot(susp_vic_by_race, aes(x=race, y=percentage, fill=race)) + geom_bar(stat="identity") + facet_grid(.~susp_vic_category) + theme(axis.text.x = element_text(angle = 60, hjust=1)) + xlab("") + ylab("Percentage") + guides(fill=guide_legend(title="")) + scale_fill_manual(values=cbbPalette) + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 susp_vic_bar_chart
 ```
 
@@ -120,7 +125,9 @@ sqf_crime_indexed_by_year <- melt(sqf_vs_crime_by_year, id.vars = "year", measur
 
 colnames(sqf_crime_indexed_by_year)[2] <- "Category"
 
-ggplot() + geom_line(data=sqf_crime_indexed_by_year, aes(x=year, y=value, color=Category), lwd=1.5) + xlab("Year") + ylab("Index") + ggtitle("Stop-and-Frisk vs. Crime") + scale_color_brewer(palette="Set1") + theme_grey(16) + theme(plot.title=element_text(hjust=0.5)) + scale_x_continuous("", labels = as.character(sqf_crime_indexed_by_year$year), breaks = sqf_crime_indexed_by_year$year)
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot() + geom_line(data=sqf_crime_indexed_by_year, aes(x=year, y=value, color=Category), lwd=1.5) + xlab("Year") + ylab("Index") + ggtitle("Stop-and-Frisk vs. Crime") + scale_color_manual(values=cbbPalette) + theme_grey(16) + theme(plot.title=element_text(hjust=0.5)) + scale_x_continuous("", labels = as.character(sqf_crime_indexed_by_year$year), breaks = sqf_crime_indexed_by_year$year)
 
 ```
 
