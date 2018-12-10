@@ -45,9 +45,9 @@ llframe <- cbind(nycarrestsls, nbmatch)
 llsample=llframe[sample(nrow(llframe), 50), ]
 
 
-leaflet(nyc_neighborhoods) %>%
-  addTiles() %>% 
-  addMarkers(~Longitude, ~Latitude, popup = ~neighborhood, data = llsample) %>%addProviderTiles("CartoDB.Positron")
+#leaflet(nyc_neighborhoods) %>%
+  #addTiles() %>% 
+  #addMarkers(~Longitude, ~Latitude, popup = ~neighborhood, data = llsample) %>%addProviderTiles("CartoDB.Positron")
 
 ```
 
