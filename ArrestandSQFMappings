@@ -1,0 +1,134 @@
+---
+title: "FinalProjectEVAV"
+author: "Justin Kennedy"
+date: "November 30, 2018"
+output: html_document
+---
+
+```{r}
+nycarrests=read.csv(file="NYPD_Arrests_Data__Historic_.csv", header=TRUE, sep=',', na.strings = c("", "NA"))
+```
+
+```{r}
+library(viridis)
+library(scales)
+library(tigris)
+library(dplyr)
+library(leaflet)
+library(sp)
+library(ggmap)
+library(rgeos)
+library(maptools)
+library(broom)
+library(httr)
+library(rgdal)
+library(proj4)
+
+register_google(key = "AIzaSyB72pIzWJufJCUD_diZUOTDYtfkfwnyrME ") 
+
+nyc_map <- get_map(location = c(lon = -74.00, lat = 40.71), maptype = "terrain", zoom = 11)
+
+r <- GET('http://data.beta.nyc//dataset/0ff93d2d-90ba-457c-9f7e-39e47bf2ac5f/resource/35dd04fb-81b3-479b-a074-a27a37888ce7/download/d085e2f8d0b54d4590b1e7d1f35594c1pediacitiesnycneighborhoods.geojson')
+
+nycarrestsls = nycarrests[, c(17,18)]
+
+nyc_neighborhoods <- readOGR(content(r,'text'), 'OGRGeoJSON', verbose = F)
+joinnbs <- tidy(nyc_neighborhoods, region="neighborhood")
+
+nycarrestsls2=nycarrestsls
+coordinates(nycarrestsls2) <- ~Longitude + Latitude
+proj4string(nycarrestsls2) <- proj4string(nyc_neighborhoods)
+
+nbmatch <- over(nycarrestsls2, nyc_neighborhoods)
+llframe <- cbind(nycarrestsls, nbmatch)
+
+llsample=llframe[sample(nrow(llframe), 50), ]
+
+
+#leaflet(nyc_neighborhoods) %>%
+  #addTiles() %>% 
+  #addMarkers(~Longitude, ~Latitude, popup = ~neighborhood, data = llsample) %>%addProviderTiles("CartoDB.Positron")
+
+```
+
+
+```{r}
+nbpoints <- llframe %>%
+  group_by(neighborhood) %>%
+  summarize(Arrests=n())
+
+joinpointsnb= left_join(joinnbs, nbpoints, by=c("id"="neighborhood"))
+
+ggmap(nyc_map) + geom_polygon(data=joinpointsnb, aes(x=long, y=lat, group=group, fill=Arrests),alpha=0.9)+ggtitle("Arrests By Neighborhood NYC 2013-2017")+labs(y="Latitude", x = "Longitude")+scale_fill_viridis(labels=comma, name="Arrests", limits=c(0, 80000))
+```
+
+
+
+#Main Analysis: To make the above visualization showing the number of arrests by neighborhood in the years 2013-2017, we used the Google Maps API. The get_map function allows us to set the background mapping to cover the span of New York City. The GET command allows us to import a JSON that maps out the boundaries of all the neighborhoods in NYC. We then use a series of functions to match the longitude/latitude coordinates in the arrests dataset to their corresponding neighborhoods. The coordinates function takes the latitude/longitude coordinates and converts the dataframe into a SpatialPointsDataFrame which then can be used as input to the proj4string package functions. Using proj4string, we are able to map the longitude/latitude coordinates of the arrests dataset to the coordinate system used in the nyc neighborhood JSON. The over function is then used to find spatial intersections between the arrest coordinates and their corresponding neighborhood. Finally, to prep the data for the map creation, a series of pipelines is used to find the number of arrest coordinates per neighborhood using group_by and summarize, and joining the nyc neighborhoods dataframe with the number of points by neighborhood dataframe. gg_map is then used to create the map with gg_polygon added to fill the boundaries of each neighborhood. A scale gradient is used to show the difference between number of arrests of different neighborhoods. We chose a scale gradient because it seemed to work well for differentiating adjacent and non-adjacent neighborhoods on a continuous scale for comparison. Furthermore, we believe using this visualization type as opposed to a different medium such as a bar chart or cleveland dot plot allows the audience to quickly decipher low/high arrests neighborhoods as well as identify geographic spatial clusters between adjacent neighborhoods and understand the distrbution of arrests by borough and NYC at large that wouldnt be visible in a bar chart or dot plot.     
+
+#Executive Summary: This map visualization shows the number of arrests per neighborhood in New York City in the time period from 2013-2017, with the more brighter colors representing neighborhoods with higher densities of arrests. We can observe certain neighborhoods with relatively high numbers of arrests such as east Queens and the Canarsie, Crown Heights, and East Flatbush areas of Brooklyn. Other neighborhoods such as those in Staten Island and south Brooklyn show relatively low arrest densities in comparison. We can also notice certain similar high-arrest patterns across adjacent cities such as in the middle of Brooklyn and Upper Manhattan. One major commonality among these named high arrest neighborhoods is the relatively high Black/Hispanic populations. Though we certainly can't attribute the difference between these high/low density arrest neighborhoods solely to race, its a component to investigate further. Other variables that could contribute to the disparities include employment rate and income. 
+
+```{r}
+nycsqf=read.csv(file="sqf_data_peak_years.csv", header=TRUE, sep=',', na.strings = c("", "NA"))
+```
+
+```{r}
+
+nycsqfls = nycsqf[, c(107,108)]
+nycsqfls=nycsqfls[complete.cases(nycsqfls), ]
+
+nycsqfls<- data.frame(sapply(nycsqfls, function(x) as.numeric(as.character(x))))
+
+mapping <- project(nycsqfls, inverse=TRUE, proj="+proj=lcc +lat_1=41.03333333333333 +lat_2=40.66666666666666 +lat_0=40.16666666666666 +lon_0=-74 +x_0=300000.0000000001 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=ft  +to_meter=0.3048006096012192 +no_defs")
+
+latlonSF <- data.frame(Latitude=mapping[[2]], Longitude=mapping[[1]])
+
+latlonSF2 = latlonSF
+coordinates(latlonSF2) <- ~Longitude + Latitude
+proj4string(latlonSF2) <- proj4string(nyc_neighborhoods)
+nbmatchSF <- over(latlonSF2, nyc_neighborhoods)
+llframeSF <- cbind(latlonSF, nbmatchSF)
+
+nbpointsSF <- llframeSF %>%
+  group_by(neighborhood) %>%
+  summarize(Stop_and_Frisks=n())
+
+joinnbsSF <- tidy(nyc_neighborhoods, region="neighborhood") 
+
+joinpointsnbSF <- left_join(joinnbsSF, nbpointsSF, by=c("id"="neighborhood"))
+```
+
+```{r}
+llsample=llframeSF[sample(nrow(llframeSF), 50), ]
+
+
+leaflet(nyc_neighborhoods) %>%
+  addTiles() %>% 
+  addMarkers(~Longitude, ~Latitude, data = llsample) %>%addProviderTiles("CartoDB.Positron")
+```
+
+
+#Main Analysis: In the above map, we plotted the coordinates (longitude/latitude) of a random subset of Stop and Frisks. Given the longitude and latitude of every recorded Stop and Frisk between 2008-2012, we used the sample function to take the random 50 point subset. To make the plot, we utilized the leaflet package to take the nyc neighborhoods mapping JSON and plot the random data points accordingly. We decided to use 50 points as it appeared to be the maximum number of points before the visual became overcrowded and tough to intrepret. Similar to the arrest region map, plotting the arrest locations on a map as opposed to a different plot allowed us to compare regions geographically in terms of potential clusters of arrests.      
+
+#Executive Summary: Through this visualization we are able to see a random subset of Stop and Frisks (50) throughout NYC between 2008-2012. In this sense, we get an idea of the distribution of S&F's throughout NYC as well as potential spatial clusters. We can notice from the map apparent clusters of arrests in Upper Manhattan and central Brooklyn. East Queens and Staten Island on the other hand have very few points marked. While by no means completely representative of the level of Stop and Frisking in NYC, these clusters potentially forecast areas to look into for more extensive analysis into the relationship between arrests and Stop and Frisks.   
+
+
+
+
+
+
+```{r}
+ggmap(nyc_map) + 
+  geom_polygon(data=joinpointsnbSF, aes(x=long, y=lat, group=group, fill=Stop_and_Frisks), alpha=0.9)+ggtitle("Stop and Frisks By Neighborhood NYC 2008-2012 Peak Years")+labs(y="Latitude", x = "Longitude")+scale_fill_viridis(labels=comma, limits=c(0, 150000), name="Stop and Frisks")
+```
+
+
+#Main Analysis: For the Stop and Frisk neighborhood fill plot, the process was the same as for the arrests neighborhood fill plot. Here the the coordinates of all Stop and Frisks in the period 2008-2012 were taken as inputs. However, one difficulty with the S&F data is that the coordinates are in terms of x,y values. To convert these coordinates to latitude/longitude,we used the project function with its inputs the x,y coordinate bounds we were mapping from and the longitude/latitude bounds we were looking to map to as well as the coordinate system features of the x,y coordinates. The NYC gov website publishes the parameters they use for all their coordinate datasets in an online document titled 'Citywide Guidelines for Geographic Information Systems'. For example, for x,y geosptial coordinates they adhere to the NAD83 datum and GRS80 ellipsoid basis. The project function uses this data to complete the conversion. After taking the resulting longitudes/latitudes of all the recorded Stop and Frisks, the pipeline is then the same as for the arrests maps in converting this information into a neighborhood fill graph. 
+
+#Another issue that came up for the Stop and Frisk data is that the available historical data files were too big to be imported into R. As a result, we used the 'peak years' dataset from 2008-2012. In this sense we're making inferences between the Stop and Frisk and Arrest data (historical data only covering 2013-2017) on the premise that the number of arrests by neighborhood hasnt changed drastically in the last 6-8 years (Shown in Interactive Component).      
+
+#Executive Summary: From the 2008-2012 Stop and Frisk visualization above, we are able to see the number of stop and frisks per neighborhood in New York City during the peak years of New York's Stop and Frisk initiative. From the image, we can see certain neighborhoods of NYC having significantly more S&F's compared to others. In particular, Roosevelt Island and Fort Wadsworth, with 16 and 55 S&F's respectively, have comparatively low S&F counts while neighborhoods like Bedford-Stuyvesant and East Harlem (137770 and 115096 S&F's respectively) have comparatively large counts. The map visualization also shows spatial clustering among neighborhoods with low and high counts of S&F's. For example, Upper Manhattan and Brooklyn appear to have multiple neighborhoods in the same vicinity with high levels of S&F's while Lower Manhattan and Staten Island neighborhoods appear to have uniformly low levels. Obviously, there are multiple variables to consider that these patterns could be attributed to.
+
+#Additionally, we can compare this visualization to the Arrests by Neighborhood map and notice some clear similarities. Namely, despite the maps differing in time frame, one can notice the number of arrests per neighborhood correlating heavily with the number of S&F's per neighborhood. Intuitively, this agrees with what one would expect. What's perhaps more interesting is the divergence between arrests and S&F's of certain neighborhoods; for example Midtown/Lower Manhattan and Rochdale, Springfield Gardens, St. Albans neighborhoods of Queens. 
+
+#We look to investigate an additional component of this relationship between number of arrests and number of S&F's through the following interactive component. 
