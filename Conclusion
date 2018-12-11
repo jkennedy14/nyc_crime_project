@@ -1,0 +1,15 @@
+Throughout the project, a common limitation was a lack of data for many of the questions we wanted to study. While the nyc.gov 
+website publishes a lot of useful data, specific information such as the racial distribution by neighborhood and recorded arrests 
+prior to 2013 were not publicly offered. We came to learn that in many cases like these, there were supplemental questions we could test 
+that could cumulatively provide multiple angles of insight into our main topic even if not directly relevant. Another common limitation 
+was the differences in the ways different datasets were presented. In many cases, we had to choose a uniform method of presentation and 
+convert each dataset accordingly. For example, many of the datasets nyc.gov provides use x,y spatial coordinates whereas many R mapping 
+functions work more conveniently with longitude/latitude coordinates. By going through the processes of making these conversions of 
+different datasets to the same format, however, we were able to grow our skillset for cleaning inconveniently-structured datasets and 
+learn how to efficiently deal with these problems in the future. 
+
+In this project, we were able to provide an introduction to exploring and visualizing how the stop-and-frisk policy has been
+implemented across New York city, its efficacy, and how it has indirectly affected people of different backgrounds. 
+If we had more time to work on this topic, an area we we'd be interested in exploring further would be isolating the effect of race 
+in stop-and-frisks with respect to other variables where covariance might exist such as with neighborhood employment rates and 
+income levels.
