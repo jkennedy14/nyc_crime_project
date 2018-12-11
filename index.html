@@ -123,7 +123,6 @@
                 let raceScale = d3.scaleBand().domain(Object.values(races)).range([0, height / 2])
                 let countScale = d3.scaleLinear().domain([min, max]).range([0, height / 2])
 
-
                 let yAxis = d3.axisLeft(raceScale)
                 let xAxis = d3.axisBottom(countScale)
                 chart.append("g").classed("xaxis", true).call(yAxis).attr("transform", `translate(${chartOffset * 2}, ${chartOffset})`)
@@ -143,7 +142,7 @@
 
                 function updateChart(data) {
                     if (selectedPrecinct && data) {
-                        console.log(data)
+                        // console.log(data)
                         let newMax = d3.max(data, d => Number(d.count))
                         let newScale = d3.scaleLinear().domain([min, newMax]).range([0, chartSize])
                         console.log(newMax)
